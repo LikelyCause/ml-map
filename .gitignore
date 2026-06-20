@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.python-version
+
+# Data / model caches (large, regenerable)
+backend/data/*
+!backend/data/.gitkeep
+*.tif
+*.tiff
+*.pth
+*.ckpt
+*.npy
+checkpoints/
+.cache/
+
+# Python venv (if created locally)
+.venv/
+venv/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Editor / OS
+.DS_Store
+.idea/

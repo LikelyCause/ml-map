@@ -1,0 +1,276 @@
+* {
+  box-sizing: border-box;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  font-family: system-ui, sans-serif;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.6rem 1rem;
+  background: #11151c;
+  color: #e8edf2;
+  border-bottom: 1px solid #2a313c;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.controls label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9aa7b4;
+  gap: 0.2rem;
+}
+
+.controls select,
+.controls input,
+.controls button {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #2a313c;
+  background: #1b212b;
+  color: #e8edf2;
+}
+
+.controls input {
+  min-width: 11rem;
+}
+
+.controls button {
+  cursor: pointer;
+}
+
+.controls button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.controls button.active {
+  background: #0e7490;
+  border-color: #22d3ee;
+}
+
+.controls button.primary:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #1e293b;
+  color: #e0f2fe;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #38bdf8;
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.info {
+  background: #16263a;
+  color: #bfdbfe;
+  padding: 0.35rem 1rem;
+  font-size: 0.8rem;
+}
+
+.info .infer {
+  color: #fdba74;
+  font-weight: 600;
+}
+
+.status {
+  font-size: 0.8rem;
+  color: #9aa7b4;
+}
+
+.error {
+  background: #5b1d1d;
+  color: #ffd7d7;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.legend {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 2;
+  background: rgba(17, 21, 28, 0.9);
+  color: #e8edf2;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  max-height: 60%;
+  overflow-y: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.legend-title {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.5px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1px 0;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.legend-name {
+  flex: 1;
+}
+
+.legend-pct {
+  color: #9aa7b4;
+  margin-left: 0.6rem;
+}
+
+.evalpanel {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  background: rgba(17, 21, 28, 0.92);
+  color: #e8edf2;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  max-width: 280px;
+}
+
+.eval-title {
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.eval-sub {
+  color: #9aa7b4;
+  font-weight: 400;
+}
+
+.eval-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 0.8rem;
+}
+
+.eval-metrics b {
+  color: #7dd3fc;
+}
+
+.eval-overall {
+  margin-bottom: 0.35rem;
+}
+
+.eval-lc table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.72rem;
+}
+
+.eval-lc th,
+.eval-lc td {
+  text-align: right;
+  padding: 1px 4px;
+}
+
+.eval-lc th:first-child,
+.eval-lc td:first-child {
+  text-align: left;
+}
+
+.eval-hint {
+  margin-top: 0.45rem;
+  color: #9aa7b4;
+  font-size: 0.7rem;
+}
+
+.pane {
+  position: relative;
+  flex: 1;
+  border-right: 2px solid #11151c;
+}
+
+.pane:last-child {
+  border-right: none;
+}
+
+.pane-label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  background: rgba(17, 21, 28, 0.85);
+  color: #e8edf2;
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+}
