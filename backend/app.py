@@ -46,13 +46,15 @@ def progress() -> dict:
 @app.get("/api/health")
 def health() -> dict:
     gpu = False
+    device = "cpu"
     try:
-        import torch  # noqa: PLC0415 - optional until model phases
+        from backend.models.device import get_device  # noqa: PLC0415 - optional until model phases
 
-        gpu = torch.cuda.is_available()
+        device = get_device().type  # "cuda" | "mps" | "cpu"
+        gpu = device != "cpu"
     except Exception:
         pass
-    return {"status": "ok", "gpu": gpu}
+    return {"status": "ok", "gpu": gpu, "device": device}
 
 
 @app.get("/api/demo")

@@ -18,7 +18,7 @@ export async function getDemoChip(): Promise<Chip> {
   return res.json();
 }
 
-export async function getHealth(): Promise<{ status: string; gpu: boolean }> {
+export async function getHealth(): Promise<{ status: string; gpu: boolean; device?: string }> {
   const res = await fetch("/api/health");
   return res.json();
 }

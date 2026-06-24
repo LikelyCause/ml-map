@@ -122,6 +122,11 @@ infrastructure layer while keeping alignment.
   - Source it first in any shell: `export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"`
 - **GPU:** RTX 4080 Super, 16 GB VRAM, driver 610.62 (CUDA 12.x) — torch CUDA
   wheels work; system CUDA toolkit not required.
+- **Apple Silicon:** runs natively on the PyTorch MPS backend. Install default
+  PyPI torch wheels (no CUDA index). Accelerator is auto-selected at runtime
+  (cuda → mps → cpu) in `backend/models/device.py`. `run.sh` exports
+  `PYTORCH_ENABLE_MPS_FALLBACK=1` so ops not yet implemented in Metal fall back to
+  CPU. Models share unified memory, so prefer a Mac with ≥16 GB RAM.
 - **Ports:** backend 8077, frontend 5173.
 
 ### Packages already in the venv (do NOT reinstall blindly — check first)

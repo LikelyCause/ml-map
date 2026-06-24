@@ -16,6 +16,7 @@ from rasterio.features import shapes
 from rasterio.transform import from_bounds
 from shapely.geometry import mapping, shape
 
+from backend.models.device import get_device
 from backend.progress import set_stage
 
 from .sam import masks_from_boxes
@@ -75,7 +76,7 @@ def _get_detector(det_id: str):
         set_stage("model", f"Loading detector {det_id}…")
         from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = get_device()
         proc = AutoProcessor.from_pretrained(det_id)
         model = AutoModelForZeroShotObjectDetection.from_pretrained(det_id).to(device).eval()
         _DETECTORS[det_id] = (model, proc, device)

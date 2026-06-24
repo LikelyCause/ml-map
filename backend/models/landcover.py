@@ -13,6 +13,7 @@ from huggingface_hub import hf_hub_download
 from PIL import Image
 
 from backend.geo.chips import load_chip
+from backend.models.device import get_device
 from backend.progress import set_stage
 
 from .prithvi_model import BAND_MEANS, BAND_STDS, CLASSES, PrithviSeg, load_state_into
@@ -39,7 +40,7 @@ def _get_model() -> PrithviSeg:
         sd = torch.load(path, map_location="cpu", weights_only=False)["state_dict"]
         m = PrithviSeg().eval()
         load_state_into(m, sd)
-        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        dev = get_device()
         _MODEL = m.to(dev)
         _MODEL._dev = dev  # type: ignore[attr-defined]
     return _MODEL

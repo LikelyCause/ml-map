@@ -1,9 +1,17 @@
 # Backend dependencies for ML-Map. Install into a Python 3.12 environment.
 #
-# PyTorch must come from the CUDA index (GPU build). Install it FIRST:
+# Install PyTorch FIRST, then `pip install -r backend/requirements.txt`.
+#
+# NVIDIA (Linux/Windows, CUDA 12.4 build):
 #   pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
-# then:
-#   pip install -r backend/requirements.txt
+#
+# Apple Silicon (macOS arm64) — the default PyPI wheels ship the MPS backend:
+#   pip install torch==2.6.0 torchvision==0.21.0
+#
+# The accelerator is auto-selected at runtime (cuda → mps → cpu); see
+# backend/models/device.py. On Apple Silicon, run.sh sets
+# PYTORCH_ENABLE_MPS_FALLBACK=1 so the few ops not yet implemented in Metal
+# transparently fall back to CPU instead of raising.
 
 # --- web ---
 fastapi==0.137.2
@@ -23,7 +31,7 @@ planetary-computer==1.0.0
 odc-stac==0.5.2
 
 # --- models / inference ---
-# torch / torchvision: see header (CUDA index). Pinned: torch==2.6.0+cu124, torchvision==0.21.0+cu124
+# torch / torchvision: see header. Pinned to 2.6.0 / 0.21.0 (CUDA wheels on NVIDIA, default PyPI on Apple Silicon).
 transformers==5.12.1
 accelerate==1.14.0
 safetensors==0.8.0

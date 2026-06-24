@@ -1,13 +1,15 @@
 """SAM 'segment everything' mask generation via the HF mask-generation pipeline.
 
-Pipelines are cached per checkpoint and kept warm on the GPU. SAM checkpoints are
-a few hundred MB (base) to ~2.5 GB (huge); the 16 GB 4080 holds them comfortably.
+Pipelines are cached per checkpoint and kept warm on the accelerator. SAM
+checkpoints are a few hundred MB (base) to ~2.5 GB (huge); the 16 GB 4080 holds
+them comfortably, as does an Apple Silicon Mac with enough unified memory.
 """
 from __future__ import annotations
 
 import torch
 from transformers import pipeline
 
+from backend.models.device import get_device, pipeline_device
 from backend.progress import set_stage
 
 _PIPES: dict[str, object] = {}
@@ -17,8 +19,7 @@ _SAM_MODELS: dict[str, tuple] = {}
 def get_mask_pipeline(hf_id: str):
     if hf_id not in _PIPES:
         set_stage("model", f"Loading {hf_id}…")
-        device = 0 if torch.cuda.is_available() else -1
-        _PIPES[hf_id] = pipeline("mask-generation", model=hf_id, device=device)
+        _PIPES[hf_id] = pipeline("mask-generation", model=hf_id, device=pipeline_device())
     return _PIPES[hf_id]
 
 
@@ -43,7 +44,7 @@ def get_sam_model(seg_id: str):
         set_stage("model", f"Loading {seg_id}…")
         from transformers import SamModel, SamProcessor
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = get_device()
         model = SamModel.from_pretrained(seg_id).to(device).eval()
         proc = SamProcessor.from_pretrained(seg_id)
         _SAM_MODELS[seg_id] = (model, proc, device)

@@ -59,12 +59,12 @@ _(These are rendered model outputs; add live UI screenshots to `docs/` as desire
 ## Architecture
 
 ```
-React + MapLibre GL (Vite, :5173)            FastAPI (:8077, CUDA)
+React + MapLibre GL (Vite, :5173)            FastAPI (:8077, CUDA / Apple MPS)
  ├─ AOI draw → /ingest                  →      ├─ /ingest   NAIP / Sentinel-2 (STAC mosaic, reproject)
  ├─ task ▸ model ▸ prompt → /infer      →      ├─ /infer    SAM · DINO+SAM (tiled) · Prithvi land cover
  ├─ Evaluate → /evaluate                →      ├─ /evaluate OSM / WorldCover → IoU/F1
  ├─ split maps + overlays               ←      ├─ /progress live stage tracker
- └─ progress banner (polls /progress)         └─ model zoo (lazy-loaded, kept warm in 16 GB VRAM)
+ └─ progress banner (polls /progress)         └─ model zoo (lazy-loaded, kept warm in GPU / unified memory)
 ```
 
 Chips are small per‑AOI, so results are served as MapLibre `ImageSource` raster
@@ -83,9 +83,11 @@ overlays (PNG + bounds) and GeoJSON vectors — no tile server needed.
 
 ## Stack
 
-- **Backend:** FastAPI · PyTorch 2.6 (CUDA 12.4) · transformers · terratorch · rasterio/rioxarray/odc‑stac · shapely/geopandas. Python 3.12 (pyenv venv `machine-learning`).
+- **Backend:** FastAPI · PyTorch 2.6 · transformers · terratorch · rasterio/rioxarray/odc‑stac · shapely/geopandas. Python 3.12 (pyenv venv `machine-learning`).
 - **Frontend:** React + TypeScript + MapLibre GL (Vite).
-- **Hardware:** developed on an RTX 4080 Super (16 GB); all inference local.
+- **Hardware:** developed on an RTX 4080 Super (16 GB); all inference local. Also
+  runs natively on Apple Silicon via the PyTorch MPS backend — the accelerator is
+  auto-selected at runtime (cuda → mps → cpu), so no code changes per machine.
 
 ## Run (development)
 

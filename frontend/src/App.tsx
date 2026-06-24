@@ -42,11 +42,20 @@ function App() {
   const [evalResult, setEvalResult] = useState<EvalResult | null>(null);
   const [reference, setReference] = useState<GeoJSON.FeatureCollection | null>(null);
   const [gpu, setGpu] = useState<boolean | null>(null);
+  const [device, setDevice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    getHealth().then((h) => setGpu(h.gpu)).catch(() => setGpu(null));
+    getHealth()
+      .then((h) => {
+        setGpu(h.gpu);
+        setDevice(h.device ?? null);
+      })
+      .catch(() => {
+        setGpu(null);
+        setDevice(null);
+      });
   }, []);
 
   // While a long operation is in flight, poll the backend for live progress.
@@ -231,7 +240,9 @@ function App() {
             </button>
           )}
         </div>
-        <div className="status">GPU: {gpu === null ? "…" : gpu ? "on" : "off"}</div>
+        <div className="status">
+          GPU: {gpu === null ? "…" : gpu ? `on${device ? ` (${device})` : ""}` : "off"}
+        </div>
       </header>
 
       {error && <div className="error">{error}</div>}
