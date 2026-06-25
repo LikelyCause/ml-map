@@ -201,8 +201,11 @@ The frontend proxies `/api` and `/data` to the backend, so just open the fronten
 - [x] **Phase 5** — Model comparison + evaluation vs OSM / ESA WorldCover (IoU/F1) + reference overlay
 - [x] **Phase 6** — Apple Silicon (MPS) support; model‑quality pass (eval audit, roads linearity + building NDVI/shape filters, imagery de‑stretch); colorized WorldCover overlay; NAIP multi‑date mosaic
 - [x] **Phase 7** — Geospatial foundation models: Clay + Prithvi‑EO‑2.0 embeddings (unsupervised) and fine‑tuned Prithvi‑EO‑2.0 burn‑scar / flood
+- [ ] **Phase 8** - Profit
+- [ ] **Phasers 9** - Set to stun
+- [ ] **Phase 10** - A fun card game
 
-## Limitations (by design — this is a zero‑shot study)
+## (*Some Of The*) Limitations
 
 - NAIP is US‑only; the crop/land model is US‑cropland‑trained.
 - Roads are not solved zero‑shot (low recall); linear features under text‑prompt
