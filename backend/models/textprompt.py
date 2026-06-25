@@ -9,6 +9,8 @@ replace the weaker segment-everything approach.
 """
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import torch
 from PIL import Image
@@ -16,9 +18,18 @@ from rasterio.features import shapes
 from rasterio.transform import from_bounds
 from shapely.geometry import mapping, shape
 
-from backend.models.device import get_device
+from backend.models.device import detector_device
 from backend.progress import set_stage
 
+from .buildings import (
+    MAX_AREA_M2,
+    MAX_ASPECT,
+    MAX_IMAGE_FRACTION,
+    MIN_AREA_M2,
+    MIN_EXTENT,
+    NDVI_VEG_THRESH,
+    ndvi_for_masks,
+)
 from .sam import masks_from_boxes
 
 # Detection runs at full native resolution (up to this cap) so small/medium
@@ -39,7 +50,49 @@ TILE_PX = 512
 TILE_OVERLAP = 0.35
 NMS_IOU = 0.5
 
+# Roads are linear; box-prompted SAM otherwise masks the dominant region in each
+# box (a field/lawn parcel). Require an elongated footprint to keep roads and drop
+# compact blobs. Measured separation: real roads elongation ≳13, field blobs ≲3.
+ROAD_MIN_ELONGATION = 4.0
+
 _DETECTORS: dict[str, tuple] = {}
+
+
+def _ground_shape(poly, bounds):
+    """(area_m2, image_fraction, extent, elongation) for a lon/lat polygon, with
+    cos(lat) correction so meters and elongation aren't distorted by latitude."""
+    w, s, e, n = bounds
+    m_lat = 111320.0
+    m_lon = 111320.0 * math.cos(math.radians((s + n) / 2))
+    area_m2 = poly.area * m_lat * m_lon
+    chip_deg_area = (e - w) * (n - s)
+    image_fraction = poly.area / chip_deg_area if chip_deg_area else 0.0
+    extent = poly.area / poly.envelope.area if poly.envelope.area else 0.0
+    xs, ys = poly.minimum_rotated_rectangle.exterior.coords.xy
+    edges = sorted(
+        math.hypot((xs[i + 1] - xs[i]) * m_lon, (ys[i + 1] - ys[i]) * m_lat)
+        for i in range(len(xs) - 1)
+    )
+    edges = [d for d in edges if d > 0]
+    elongation = edges[-1] / edges[0] if len(edges) >= 2 else 99.0
+    return area_m2, image_fraction, extent, elongation
+
+
+def _passes_task_filter(poly, bounds, task) -> bool:
+    """Shape gate for the DINO+SAM output. Free-text (None/'textprompt') keeps
+    everything (honest zero-shot); roads require linearity; buildings reuse the
+    segment-everything footprint filters so DINO+SAM stops emitting block blobs."""
+    if task not in ("roads", "buildings"):
+        return True
+    area_m2, frac, extent, elong = _ground_shape(poly, bounds)
+    if task == "roads":
+        return elong >= ROAD_MIN_ELONGATION
+    return (
+        frac <= MAX_IMAGE_FRACTION
+        and MIN_AREA_M2 <= area_m2 <= MAX_AREA_M2
+        and extent >= MIN_EXTENT
+        and elong <= MAX_ASPECT
+    )
 
 
 def _starts(size: int, tile: int, step: int) -> list[int]:
@@ -76,7 +129,7 @@ def _get_detector(det_id: str):
         set_stage("model", f"Loading detector {det_id}…")
         from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
 
-        device = get_device()
+        device = detector_device()
         proc = AutoProcessor.from_pretrained(det_id)
         model = AutoModelForZeroShotObjectDetection.from_pretrained(det_id).to(device).eval()
         _DETECTORS[det_id] = (model, proc, device)
@@ -134,7 +187,7 @@ def _detect(det_id: str, image, prompt: str):
     return sorted(dets, key=lambda d: d[1], reverse=True)[:MAX_BOXES]
 
 
-def segment_by_text(png_path, bounds, det_id: str, seg_id: str, prompt: str) -> dict:
+def segment_by_text(png_path, bounds, det_id: str, seg_id: str, prompt: str, task: str | None = None) -> dict:
     base = Image.open(png_path).convert("RGB")
 
     # Detect at full native resolution (down only if above the cap).
@@ -161,11 +214,14 @@ def segment_by_text(png_path, bounds, det_id: str, seg_id: str, prompt: str) -> 
     set_stage("infer", f"Vectorizing {len(dets)} detection(s)…")
     transform = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], w_px, h_px)
     simplify_tol = 0.5 / 111320.0  # ~0.5 m in degrees
+    veg_ndvi = ndvi_for_masks(png_path, w_px, h_px) if task == "buildings" else None
 
     features = []
     for (_, score, label), m in zip(dets, masks):
         m = np.asarray(m, dtype=bool)
         if m.shape != (h_px, w_px) or m.sum() == 0:
+            continue
+        if veg_ndvi is not None and float(veg_ndvi[m].mean()) > NDVI_VEG_THRESH:
             continue
         geoms = [
             shape(g) for g, v in shapes(m.astype(np.uint8), mask=m, transform=transform) if v == 1
@@ -174,6 +230,8 @@ def segment_by_text(png_path, bounds, det_id: str, seg_id: str, prompt: str) -> 
             continue
         poly = max(geoms, key=lambda g: g.area)
         if poly.is_empty or poly.area <= 0:
+            continue
+        if not _passes_task_filter(poly, bounds, task):
             continue
         poly = poly.simplify(simplify_tol, preserve_topology=True)
         features.append(

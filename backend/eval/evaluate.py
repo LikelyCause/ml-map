@@ -34,9 +34,12 @@ def evaluate(chip_id: str, task: str, model_id: str, prompt: str | None = None) 
 
         set_stage("eval", "Rasterizing + scoring…")
         w_px, h_px = M.eval_grid(bounds)
-        buf = ROAD_BUFFER_DEG if task == "roads" else 0.0
-        pred_mask = M.rasterize_fc(pred["geojson"], bounds, w_px, h_px, buffer_deg=buf)
-        ref_mask = M.rasterize_fc(ref_fc, bounds, w_px, h_px, buffer_deg=buf)
+        # Roads predictions are already areal SAM polygons; only the line-geometry
+        # OSM reference needs buffering to gain comparable area. Buffering the pred
+        # too inflates its footprint and unfairly deflates road precision/IoU.
+        ref_buf = ROAD_BUFFER_DEG if task == "roads" else 0.0
+        pred_mask = M.rasterize_fc(pred["geojson"], bounds, w_px, h_px, buffer_deg=0.0)
+        ref_mask = M.rasterize_fc(ref_fc, bounds, w_px, h_px, buffer_deg=ref_buf)
         scores = M.mask_metrics(pred_mask, ref_mask)
         set_stage("done", f"IoU {scores['iou']}")
         return {

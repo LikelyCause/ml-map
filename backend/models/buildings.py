@@ -9,6 +9,7 @@ any building-specific training.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import numpy as np
 from PIL import Image
@@ -29,6 +30,7 @@ MAX_AREA_M2 = 8000.0
 MAX_IMAGE_FRACTION = 0.25  # drop giant background/ground masks
 MIN_EXTENT = 0.30  # poly area / bounding-rect area (buildings reasonably fill their box)
 MAX_ASPECT = 6.0  # drop long thin masks (roads, shadows)
+NDVI_VEG_THRESH = 0.3  # mean NDVI above this = vegetation (tree/lawn), not a building
 
 
 def _pixel_area_m2(bounds, w_px, h_px):
@@ -53,6 +55,20 @@ def _aspect_ratio(poly) -> float:
     return edges[-1] / edges[0]
 
 
+def ndvi_for_masks(png_path, w_px, h_px):
+    """Per-chip NDVI (saved at ingest from NAIP's NIR band) resized to the mask grid.
+    Returns an (h_px, w_px) float array in [-1, 1], or None if absent (e.g. a chip
+    ingested before NDVI sidecars existed — the veg filter then simply no-ops)."""
+    p = Path(png_path)
+    npy = p.parent / (p.stem.replace("_raw", "") + "_ndvi.npy")
+    if not npy.exists():
+        return None
+    u8 = np.load(npy)
+    if u8.shape != (h_px, w_px):
+        u8 = np.asarray(Image.fromarray(u8).resize((w_px, h_px), Image.BILINEAR))
+    return u8.astype(np.float32) / 127.5 - 1.0
+
+
 def segment_buildings(png_path, bounds, hf_id: str) -> dict:
     img = Image.open(png_path).convert("RGB")
     if max(img.size) > MAX_INFER_PX:
@@ -64,6 +80,7 @@ def segment_buildings(png_path, bounds, hf_id: str) -> dict:
     px_m2 = _pixel_area_m2(bounds, w_px, h_px)
     transform = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], w_px, h_px)
     img_px = w_px * h_px
+    ndvi = ndvi_for_masks(png_path, w_px, h_px)
 
     features = []
     for m in masks:
@@ -75,6 +92,9 @@ def segment_buildings(png_path, bounds, hf_id: str) -> dict:
             continue
         area_m2 = area_px * px_m2
         if area_m2 < MIN_AREA_M2 or area_m2 > MAX_AREA_M2:
+            continue
+        # Spectral gate: reject vegetation (tree canopy / lawn) SAM masks as "building".
+        if ndvi is not None and float(ndvi[m].mean()) > NDVI_VEG_THRESH:
             continue
 
         # Vectorize the mask; keep its largest connected polygon.

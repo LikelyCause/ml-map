@@ -22,7 +22,7 @@ from .textprompt import segment_by_text
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 # Bump when the inference pipeline changes so stale cached results are ignored.
-PIPE_VERSION = "v2-hires"
+PIPE_VERSION = "v4-ndvi"
 
 # Fixed prompts for tasks that use the DINO+SAM stack but don't take user text.
 TASK_PROMPTS = {
@@ -79,7 +79,7 @@ def run_inference(chip_id: str, task: str, model_id: str, prompt: str | None = N
 
     t0 = time.time()
     if "detector" in model:
-        gj = segment_by_text(png, meta["bounds"], model["detector"], model["segmenter"], eff_prompt)
+        gj = segment_by_text(png, meta["bounds"], model["detector"], model["segmenter"], eff_prompt, task=task)
     elif "hf" in model:
         gj = segment_buildings(png, meta["bounds"], model["hf"])
     else:

@@ -1,4 +1,5 @@
 """Chip metadata + path helpers shared by ingest and inference."""
+
 from __future__ import annotations
 
 import json
@@ -14,8 +15,10 @@ def save_chip(meta: dict) -> None:
 
 def load_chip(chip_id: str) -> dict:
     p = DATA_DIR / f"{chip_id}.json"
+
     if not p.exists():
         raise KeyError(f"Unknown chip '{chip_id}' (fetch imagery first).")
+    
     return json.loads(p.read_text())
 
 

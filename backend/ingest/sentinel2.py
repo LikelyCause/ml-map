@@ -5,6 +5,7 @@ SWIR1, SWIR2) as 224x224 chips in HLS/S2 reflectance units. We pull 3 spread-out
 low-cloud scenes from the Planetary Computer, stack the 6 bands, resample to
 224x224, and also save a true-color RGB for display.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -37,8 +38,10 @@ def _bbox_id(bbox: list[float]) -> str:
 
 def _validate(bbox: list[float]) -> None:
     w, s, e, n = bbox
+
     if not (e > w and n > s):
         raise ValueError("bbox must be [west, south, east, north]")
+    
     if (e - w) > MAX_SPAN_DEG or (n - s) > MAX_SPAN_DEG:
         raise ValueError(f"AOI too large for land cover; keep each side under ~{MAX_SPAN_DEG} deg")
 
@@ -46,25 +49,32 @@ def _validate(bbox: list[float]) -> None:
 def _pick_three(items):
     """Pick 3 low-cloud scenes spread across time for multi-temporal input."""
     by_day = {}
+
     for it in items:
         day = it.properties.get("datetime", "")[:10]
         cc = it.properties.get("eo:cloud_cover", 100)
+
         if day not in by_day or cc < by_day[day].properties.get("eo:cloud_cover", 100):
             by_day[day] = it
+
     days = sorted(by_day)
+
     if len(days) < 3:
         return [by_day[d] for d in days] or None
+    
     chosen = [days[0], days[len(days) // 2], days[-1]]  # earliest, middle, latest
     return [by_day[d] for d in chosen]
 
 
 def ingest_sentinel2(bbox: list[float]) -> dict:
     _validate(bbox)
+
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     chip_id = _bbox_id(bbox)
 
     set_stage("ingest", "Searching Sentinel-2 catalog…")
     catalog = pystac_client.Client.open(STAC_URL, modifier=pc.sign_inplace)
+
     items = list(
         catalog.search(
             collections=["sentinel-2-l2a"],
@@ -73,6 +83,7 @@ def ingest_sentinel2(bbox: list[float]) -> dict:
             query={"eo:cloud_cover": {"lt": 15}},
         ).items()
     )
+
     if len(items) < 3:
         raise ValueError("Not enough clear Sentinel-2 scenes for this AOI.")
 
@@ -85,19 +96,24 @@ def ingest_sentinel2(bbox: list[float]) -> dict:
         chosen, bands=S2_BANDS, bbox=bbox, crs="EPSG:4326",
         resolution=res, groupby="solar_day", chunks={},
     )
+
     # (time, band, y, x) in reflectance units
     stack = np.stack([ds[b].values for b in S2_BANDS], axis=1).astype(np.float32)
     stack = np.nan_to_num(stack)
+
     # Sentinel-2 processing baseline 04.00+ adds a +1000 BOA offset that HLS
     # (Prithvi's training data) does not have. Remove it to match the model's
     # expected reflectance units.
     stack = np.clip(stack - 1000.0, 0, None)
+
     if stack.shape[0] < 3:  # fewer distinct solar days than expected
         reps = int(np.ceil(3 / stack.shape[0]))
         stack = np.tile(stack, (reps, 1, 1, 1))[:3]
+    
     stack = stack[:3]  # (3, 6, H, W)
 
     set_stage("ingest", "Building model input + preview…")
+    
     # Model input: (6, 3, 224, 224) resampled.
     t = torch.from_numpy(stack)  # (3,6,H,W)
     t = F.interpolate(t, size=(MODEL_PX, MODEL_PX), mode="bilinear", align_corners=False)
@@ -128,6 +144,7 @@ def ingest_sentinel2(bbox: list[float]) -> dict:
         "size_px": [int(rgb.shape[1]), int(rgb.shape[0])],
         "note": f"Sentinel-2 L2A, 3 dates ({', '.join(dates)})",
     }
+    
     save_chip(meta)
     set_stage("done", "Imagery ready")
     return meta
