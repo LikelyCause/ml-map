@@ -12,25 +12,19 @@ hard zero‑shot.** The app makes that visible and quantifiable.
 
 ## Why I built this
 
-I wanted a straight answer to a question that benchmark tables usually bury:
-**how well do geospatial foundation models actually perform on real imagery?**
-Rather than read about it, I built a tool to *see* it — and to make the two
-things that normally slow this kind of testing down trivial:
+I was curious how well both geospatial foundation models and general CV models actually perform on satellite imagery for basic tasks, and decided to build a tool to see them in action.
 
-1. **Pull imagery just by selecting on a map.** Draw a box → one click → live
-   high‑resolution imagery (NAIP / Sentinel‑2) from the Microsoft Planetary
-   Computer. No manual scene search, download, mosaic, or reproject.
-2. **Run models from the same page.** Pick a task, pick a model from a dropdown,
-   run it, and see the result overlaid next to the raw image — then score it
-   against free reference data with hard IoU / F1 numbers.
+Swath: not my best naming work, but a fun app! 
 
-**This is a testing harness, not a production system.** The goal was to make
-model behavior visible and quantifiable, fast — so the honest finding could
-surface on its own: there is no single model that does roads + buildings + land
-cover well zero‑shot. Detect‑then‑segment wins on clean buildings and collapses
-into block‑scale blobs over dense suburbia; roads hit high precision but miss the
-residential street grid; the crop‑trained land‑cover model nails Iowa farmland
-and over‑predicts "cropland" everywhere else. **That comparison is the product.**
+1) Draw a box on a map
+2) One-click pull the imagery (NAIP / Sentinel-2; reprojects/mosaicks for you!)
+3) Choose your model from a dropdown (G-DINO+SAM, SAM Everything+VIT Base-Huge, Clay-V1 Base)
+4) Run model and compare imagery with annotations side by side
+5) Score (some of) it against real reference data (OSM, ESA WorldCover)
+
+To no one's surprise, no single model does everything zero-shot. Clean buildings can be extracted pretty well with DINO+SAM, but anything dense you get massive blobs - and forget about extracting roads if there's any sort of foliage, even with NDVI filtering. 
+
+I added some validation metrics out of curiosity to measure *how* bad things were doing, and... well, bad. Good thing this isn't for production! This project makes me really curious how well these models could be tuned using open data sources, like SpaceNet. 
 
 ### Where it goes next
 
