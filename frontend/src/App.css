@@ -156,6 +156,11 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
+.legend.legend-ref {
+  right: auto;
+  left: 14px;
+}
+
 .legend-title {
   font-weight: 700;
   margin-bottom: 0.35rem;

@@ -41,6 +41,8 @@ function App() {
   const [evaluating, setEvaluating] = useState(false);
   const [evalResult, setEvalResult] = useState<EvalResult | null>(null);
   const [reference, setReference] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [referenceOverlay, setReferenceOverlay] = useState<RasterOverlay | null>(null);
+  const [referenceLegend, setReferenceLegend] = useState<LegendItem[] | null>(null);
   const [gpu, setGpu] = useState<boolean | null>(null);
   const [device, setDevice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +90,8 @@ function App() {
     setInferInfo(null);
     setEvalResult(null);
     setReference(null);
+    setReferenceOverlay(null);
+    setReferenceLegend(null);
     getModels(task).then((m) => {
       setModels(m.models);
       setModelId(m.models[0]?.id ?? "");
@@ -125,6 +129,8 @@ function App() {
     setError(null);
     setEvalResult(null);
     setReference(null);
+    setReferenceOverlay(null);
+    setReferenceLegend(null);
     try {
       const res = await runInference(
         chip.id,
@@ -165,6 +171,12 @@ function App() {
       );
       setEvalResult(res);
       setReference(res.reference_geojson ?? null);
+      setReferenceOverlay(
+        res.reference_overlay_url && res.reference_bounds
+          ? { url: res.reference_overlay_url, bounds: res.reference_bounds }
+          : null
+      );
+      setReferenceLegend(res.reference_legend ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -270,12 +282,25 @@ function App() {
           result={result}
           overlay={overlay}
           reference={reference}
+          referenceOverlay={referenceOverlay}
         />
         {evalResult && <EvalPanel ev={evalResult} />}
         {legend && legend.length > 0 && (
           <div className="legend">
             <div className="legend-title">Land cover</div>
             {legend.map((l) => (
+              <div className="legend-row" key={l.class}>
+                <span className="swatch" style={{ background: l.color }} />
+                <span className="legend-name">{l.class}</span>
+                <span className="legend-pct">{l.pct}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {referenceLegend && referenceLegend.length > 0 && (
+          <div className="legend legend-ref">
+            <div className="legend-title">ESA WorldCover</div>
+            {referenceLegend.map((l) => (
               <div className="legend-row" key={l.class}>
                 <span className="swatch" style={{ background: l.color }} />
                 <span className="legend-name">{l.class}</span>
@@ -322,7 +347,11 @@ function EvalPanel({ ev }: { ev: EvalResult }) {
           </table>
         </div>
       )}
-      <div className="eval-hint">cyan = reference (left) · orange = model (right)</div>
+      <div className="eval-hint">
+        {isVector
+          ? "cyan = reference (left) · orange = model (right)"
+          : "left = ESA WorldCover · right = model classes"}
+      </div>
     </div>
   );
 }

@@ -81,15 +81,15 @@ export interface RasterOverlay {
   bounds: Bbox;
 }
 
-function setRasterOverlay(map: maplibregl.Map | null, ov: RasterOverlay | null) {
+function setRasterOverlay(map: maplibregl.Map | null, ov: RasterOverlay | null, id = "lc") {
   if (!map) return;
-  if (map.getLayer("lc")) map.removeLayer("lc");
-  if (map.getSource("lc")) map.removeSource("lc");
+  if (map.getLayer(id)) map.removeLayer(id);
+  if (map.getSource(id)) map.removeSource(id);
   if (!ov) return;
-  map.addSource("lc", { type: "image", url: ov.url, coordinates: boundsToImageCoords(ov.bounds) });
+  map.addSource(id, { type: "image", url: ov.url, coordinates: boundsToImageCoords(ov.bounds) });
   // place below the AOI outline but above the imagery chip
   const before = map.getLayer("aoi-fill") ? "aoi-fill" : undefined;
-  map.addLayer({ id: "lc", type: "raster", source: "lc", paint: { "raster-opacity": 0.75 } }, before);
+  map.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0.75 } }, before);
 }
 
 function setChipLayers(map: maplibregl.Map, chip: Chip) {
@@ -115,9 +115,10 @@ interface Props {
   result: GeoJSON.FeatureCollection | null;
   overlay: RasterOverlay | null;
   reference: GeoJSON.FeatureCollection | null;
+  referenceOverlay: RasterOverlay | null;
 }
 
-export default function SplitMap({ chip, bbox, drawMode, onBboxDrawn, result, overlay, reference }: Props) {
+export default function SplitMap({ chip, bbox, drawMode, onBboxDrawn, result, overlay, reference, referenceOverlay }: Props) {
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const leftMap = useRef<maplibregl.Map | null>(null);
@@ -230,6 +231,14 @@ export default function SplitMap({ chip, bbox, drawMode, onBboxDrawn, result, ov
     if (map.isStyleLoaded() && map.getSource("ref")) setRef(map, reference);
     else map.once("idle", () => setRef(map, reference));
   }, [reference]);
+
+  // Update reference raster (e.g. colorized ESA WorldCover) on the left map.
+  useEffect(() => {
+    const map = leftMap.current;
+    if (!map) return;
+    if (map.isStyleLoaded()) setRasterOverlay(map, referenceOverlay, "ref-lc");
+    else map.once("idle", () => setRasterOverlay(map, referenceOverlay, "ref-lc"));
+  }, [referenceOverlay]);
 
   // (Re)load chip overlays whenever the chip changes.
   useEffect(() => {

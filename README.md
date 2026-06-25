@@ -12,11 +12,9 @@ hard zero‑shot.** The app makes that visible and quantifiable.
 
 Example outputs (raw imagery | model annotation):
 
-| Building footprints (DINO+SAM) | Land cover (Prithvi, Iowa) |
+| Building footprints (SAM Everything + ViT-Huge, NAIP) | Land cover (Prithvi-EO 100M vs ESA WorldCover, Sentinel-2) |
 |---|---|
-| ![buildings](docs/buildings_example.png) | ![land cover](docs/landcover_example.png) |
-
-_(These are rendered model outputs; add live UI screenshots to `docs/` as desired.)_
+| ![buildings](docs/building_footprints_small.png) | ![land cover](docs/land_cover.png) |
 
 ---
 
@@ -30,7 +28,7 @@ _(These are rendered model outputs; add live UI screenshots to `docs/` as desire
   4. **Text‑prompt segmentation** — open vocabulary: type any object and segment it
 - **One‑click AOI ingest** — draw a box → fetch NAIP (0.3 m) or Sentinel‑2 from the Microsoft Planetary Computer.
 - **Live progress** — granular status (catalog search → tile download → model load → tiled detect → mask → vectorize).
-- **Evaluation** — score predictions against free reference data (OpenStreetMap, ESA WorldCover) with **IoU / precision / recall / F1**, plus a reference overlay (cyan = ground truth, orange = model).
+- **Evaluation** — score predictions against free reference data (OpenStreetMap, ESA WorldCover) with **IoU / precision / recall / F1**, plus a side‑by‑side reference overlay: cyan ground‑truth vectors for buildings/roads, and a colorized **ESA WorldCover** raster (left) vs. the model's classes (right) for land cover.
 
 ## Results (zero‑shot, example AOIs)
 
@@ -42,7 +40,7 @@ _(These are rendered model outputs; add live UI screenshots to `docs/` as desire
 | Land cover | Prithvi‑EO‑1.0 100M | ESA WorldCover | overall agreement varies by AOI |
 
 **Reading the numbers:**
-- **Buildings:** detect‑then‑segment (DINO+SAM) beats segment‑everything‑then‑filter on every metric — a clean, quantified model‑comparison result.
+- **Buildings:** on clean, well‑separated scenes detect‑then‑segment (DINO+SAM) edges out segment‑everything — but over **dense clusters** DINO+SAM collapses to block‑scale blobs, and **SAM segment‑everything** (with shape + NDVI vegetation filters) is the better default. The honest fix is a polygon specialist — see [docs/building-extraction-research.md](docs/building-extraction-research.md).
 - **Roads:** high precision, low recall — the model finds prominent arterials and rail corridors but misses the residential street grid. Zero‑shot foundation models can't do full road extraction; you'd want a road‑specific model (SpaceNet/DeepGlobe).
 - **Land cover:** the CDL‑trained crop model works well over Midwest farmland (sensible corn/soy/wheat) but over‑predicts "cropland" elsewhere — specialist models don't generalize.
 
@@ -117,5 +115,14 @@ weights (the progress banner shows it).
 - NAIP is US‑only; the crop/land model is US‑cropland‑trained.
 - Roads are not solved zero‑shot (low recall).
 - SAM mask boundaries are limited by its internal 1024 px encoder.
+- **Dense, tree‑covered suburbia is hard:** SAM masks tree canopy as buildings
+  (high recall, low precision). An **NDVI vegetation filter** (using NAIP's NIR
+  band) plus shape filters mitigate it; a building specialist would solve it.
 - Reference data is imperfect (OSM completeness varies; WorldCover is 10 m and a
   different taxonomy than the crop model) — metrics are indicative, not absolute.
+
+![dense buildings](docs/building_footprints.png)
+
+_SAM "segment‑everything" over dense, foliage‑covered suburbia: it finds the
+houses (high recall) but mis‑segments tree canopy as buildings — the precision
+gap the NDVI filter targets. See [docs/building-extraction-research.md](docs/building-extraction-research.md)._

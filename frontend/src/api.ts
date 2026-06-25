@@ -110,6 +110,10 @@ export interface EvalResult {
   };
   reference_geojson?: GeoJSON.FeatureCollection;
   ref_count?: number;
+  // land-cover reference: colorized ESA WorldCover raster overlay (left pane)
+  reference_overlay_url?: string;
+  reference_bounds?: [number, number, number, number];
+  reference_legend?: LegendItem[];
 }
 
 export async function evaluateModel(
