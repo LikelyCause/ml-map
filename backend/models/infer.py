@@ -16,6 +16,7 @@ from backend.progress import set_stage
 
 from .buildings import segment_buildings
 from .embeddings import embed_and_cluster
+from .finetuned import segment_finetuned
 from .landcover import classify_landcover
 from .registry import resolve_model
 from .textprompt import segment_by_text
@@ -59,6 +60,18 @@ def run_inference(chip_id: str, task: str, model_id: str, prompt: str | None = N
         res.update(model_id=model_id, cached=False, ms=int((time.time() - t0) * 1000))
         cache.write_text(json.dumps(res))
         set_stage("done", f"{len(res['legend'])} clusters")
+        return res
+
+    # Fine-tuned Prithvi-EO-2.0 segmentation (burn scar / flood) — raster overlay.
+    if task in ("burnscar", "flood"):
+        cache = DATA_DIR / f"{chip_id}_{model_id}_{PIPE_VERSION}.json"
+        if cache.exists():
+            return {**json.loads(cache.read_text()), "cached": True}
+        t0 = time.time()
+        res = segment_finetuned(chip_id, model_id)
+        res.update(model_id=model_id, cached=False, ms=int((time.time() - t0) * 1000))
+        cache.write_text(json.dumps(res))
+        set_stage("done", f"{res['legend'][0]['pct']}% {res['legend'][0]['class']}")
         return res
 
     # Resolve the effective text prompt: user text for textprompt, else the

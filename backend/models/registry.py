@@ -55,6 +55,20 @@ TASKS: dict[str, dict] = {
             {"id": "clay-v1-base", "label": "Clay v1 base (Clay Foundation)", "embeddings": True},
         ],
     },
+    "burnscar": {
+        "label": "Burn scars (wildfire)",
+        "source": "sentinel2",
+        "models": [
+            {"id": "prithvi2-burnscar", "label": "Prithvi-EO-2.0 300M · BurnScars", "finetuned": True},
+        ],
+    },
+    "flood": {
+        "label": "Flood / surface water",
+        "source": "sentinel2",
+        "models": [
+            {"id": "prithvi2-flood", "label": "Prithvi-EO-2.0 300M · Sen1Floods11", "finetuned": True},
+        ],
+    },
 }
 
 

@@ -21,6 +21,8 @@ const TASKS = [
   { id: "roads", label: "Roads / lines of communication" },
   { id: "landcover", label: "Land cover" },
   { id: "embeddings", label: "Foundation embeddings (unsupervised)" },
+  { id: "burnscar", label: "Burn scars (wildfire)" },
+  { id: "flood", label: "Flood / surface water" },
   { id: "textprompt", label: "Text-prompt segmentation" },
 ];
 
@@ -185,7 +187,7 @@ function App() {
     }
   };
 
-  const canEval = task !== "textprompt" && task !== "embeddings";
+  const canEval = ["buildings", "roads", "landcover"].includes(task);
 
   return (
     <div className="app">
