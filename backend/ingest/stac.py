@@ -68,15 +68,21 @@ def ingest_naip(bbox: list[float]) -> dict:
     if not items:
         raise ValueError("No NAIP imagery for this AOI (NAIP is US-only).")
 
-    # Use the most recent capture date, and mosaic every tile from that date.
-    latest_date = max(it.properties.get("datetime", "")[:10] for it in items)
-    tiles = [it for it in items if it.properties.get("datetime", "").startswith(latest_date)]
+    # Mosaic ALL tiles overlapping the AOI, newest first, so recent imagery wins in
+    # overlaps and older tiles fill the gaps. A single capture date often doesn't
+    # cover the whole box (NAIP is flown in date-bounded strips), which otherwise
+    # leaves the chip smaller than the drawn AOI. merge_arrays keeps the first
+    # array's valid pixels, so newest-first => newest on top.
+    items.sort(key=lambda it: it.properties.get("datetime", ""), reverse=True)
+    tiles = items
+    dates = sorted({it.properties.get("datetime", "")[:10] for it in tiles})
+    latest_date = dates[-1] if dates else ""
 
     target_crs = None
     pieces = []
-    
+
     for i, it in enumerate(tiles, 1):
-        set_stage("ingest", f"Downloading NAIP tile {i}/{len(tiles)} ({latest_date})…")
+        set_stage("ingest", f"Downloading NAIP tile {i}/{len(tiles)}…")
         da = rioxarray.open_rasterio(it.assets["image"].href, masked=True)
     
         if target_crs is None:
@@ -143,7 +149,7 @@ def ingest_naip(bbox: list[float]) -> dict:
         "datetime": latest_date,
         "gsd": tiles[0].properties.get("gsd"),
         "size_px": list(img.size),
-        "note": f"NAIP mosaic, {len(pieces)} tile(s), {latest_date}",
+        "note": f"NAIP mosaic, {len(pieces)} tile(s) over {len(dates)} date(s)",
     }
     
     save_chip(meta)
