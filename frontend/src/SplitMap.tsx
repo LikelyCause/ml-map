@@ -124,7 +124,9 @@ export default function SplitMap({ chip, bbox, drawMode, onBboxDrawn, result, ov
   const leftMap = useRef<maplibregl.Map | null>(null);
   const rightMap = useRef<maplibregl.Map | null>(null);
   const drawCb = useRef(onBboxDrawn);
-  drawCb.current = onBboxDrawn;
+  useEffect(() => {
+    drawCb.current = onBboxDrawn;
+  });
 
   useEffect(() => {
     if (!leftRef.current || !rightRef.current) return;

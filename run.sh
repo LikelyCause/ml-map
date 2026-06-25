@@ -3,16 +3,20 @@
 set -e
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Python interpreter. Override with VPY=/path/to/python ./run.sh. Otherwise try
-# the Linux dev box's pyenv, then a macOS pyenv path, then whatever python3 is on
-# PATH (e.g. an activated venv on Apple Silicon).
+# Python interpreter for the backend. Override with: VPY=/path/to/python ./run.sh
+# Otherwise prefer an in-repo .venv, then an active virtualenv, then python3 on PATH.
 if [ -z "${VPY:-}" ]; then
-  for cand in \
-    "/home/primus/.pyenv/versions/machine-learning/bin/python" \
-    "$HOME/.pyenv/versions/machine-learning/bin/python"; do
-    if [ -x "$cand" ]; then VPY="$cand"; break; fi
-  done
-  VPY="${VPY:-$(command -v python3)}"
+  if   [ -x "$ROOT/.venv/bin/python" ]; then VPY="$ROOT/.venv/bin/python"
+  elif [ -n "${VIRTUAL_ENV:-}" ] && [ -x "$VIRTUAL_ENV/bin/python" ]; then VPY="$VIRTUAL_ENV/bin/python"
+  else VPY="$(command -v python3)"; fi
+fi
+
+# Fail clearly if the backend deps aren't installed for the chosen interpreter.
+if ! "$VPY" -c 'import fastapi, uvicorn' 2>/dev/null; then
+  echo "Backend deps not found for: $VPY"
+  echo "  See the README 'Setup' section (create a venv + pip install -r backend/requirements.txt),"
+  echo "  then re-run, or pass VPY=/path/to/python ./run.sh"
+  exit 1
 fi
 
 # On Apple Silicon (MPS), let ops not yet implemented in Metal fall back to CPU

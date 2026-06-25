@@ -12,12 +12,6 @@ export interface Chip {
   note?: string;
 }
 
-export async function getDemoChip(): Promise<Chip> {
-  const res = await fetch("/api/demo");
-  if (!res.ok) throw new Error(`demo chip request failed: ${res.status}`);
-  return res.json();
-}
-
 export async function getHealth(): Promise<{ status: string; gpu: boolean; device?: string }> {
   const res = await fetch("/api/health");
   return res.json();

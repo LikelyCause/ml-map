@@ -67,6 +67,7 @@ function App() {
   const busy = loading || running || evaluating;
   useEffect(() => {
     if (!busy) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus(null);
       return;
     }
@@ -87,6 +88,7 @@ function App() {
 
   // Load models for the selected task; reset any prior result/overlay.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResult(null);
     setOverlay(null);
     setLegend(null);

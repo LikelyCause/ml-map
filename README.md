@@ -14,17 +14,17 @@ hard zero‑shot.** The app makes that visible and quantifiable.
 
 I was curious how well both geospatial foundation models and general CV models actually perform on satellite imagery for basic tasks, and decided to build a tool to see them in action.
 
-Swath: not my best naming work, but a fun app! 
+Swath: not my best naming work, but a fun app!
 
 1) Draw a box on a map
 2) One-click pull the imagery (NAIP / Sentinel-2; reprojects/mosaicks for you!)
-3) Choose your model from a dropdown (G-DINO+SAM, SAM Everything+VIT Base-Huge, Clay-V1 Base)
+3) Choose your model from a dropdown (G-DINO+SAM, SAM Everything+ViT Base-Huge, Clay v1 Base)
 4) Run model and compare imagery with annotations side by side
 5) Score (some of) it against real reference data (OSM, ESA WorldCover)
 
-To no one's surprise, no single model does everything zero-shot. Clean buildings can be extracted pretty well with DINO+SAM, but anything dense you get massive blobs - and forget about extracting roads if there's any sort of foliage, even with NDVI filtering. 
+To no one's surprise, no single model does everything zero-shot. Clean buildings can be extracted pretty well with DINO+SAM, but anything dense and you get massive blobs (even an NDVI vegetation filter only helps so much) - and forget about extracting roads once there's any foliage.
 
-I added some validation metrics out of curiosity to measure *how* bad things were doing, and... well, bad. Good thing this isn't for production! This project makes me really curious how well these models could be tuned using open data sources, like SpaceNet. 
+I added some validation metrics out of curiosity to measure *how* bad things were doing, and... well, bad. Good thing this isn't for production! This project makes me really curious how well these models could be tuned using open data sources, like SpaceNet.
 
 ### Where it goes next
 
@@ -152,6 +152,22 @@ ingest, so adding a model is a registry entry + a wrapper.
   local. On Apple Silicon install the default PyPI torch wheels (no CUDA index)
   and `run.sh` exports `PYTORCH_ENABLE_MPS_FALLBACK=1`.
 
+## Setup
+
+Requires **Python 3.12** and **Node 18+**.
+
+```bash
+# 1) Backend — create a venv and install deps. Install torch FIRST; see the
+#    backend/requirements.txt header for the NVIDIA-vs-Apple-Silicon command.
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r backend/requirements.txt
+
+# 2) Frontend
+cd frontend && npm install && cd ..
+```
+
+Model weights download on first use (the progress banner shows them).
+
 ## Run (development)
 
 ```bash
@@ -200,3 +216,7 @@ The frontend proxies `/api` and `/data` to the backend, so just open the fronten
 _SAM "segment‑everything" over dense, foliage‑covered suburbia: it finds the
 houses (high recall) but mis‑segments tree canopy as buildings — the precision
 gap the NDVI filter targets. See [docs/building-extraction-research.md](docs/building-extraction-research.md)._
+
+## License
+
+[MIT](LICENSE) © Tanner Overcash

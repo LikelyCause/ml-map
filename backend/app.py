@@ -1,8 +1,9 @@
 """Swath backend (FastAPI).
 
-Phase 0: health check, a synthetic demo chip, and static file serving so the
-React/MapLibre split-view can render. Later phases add /stac/search, /ingest,
-/models, and /infer.
+Serves AOI ingest (NAIP / Sentinel-2 via the Planetary Computer), the model zoo
+(SAM, Grounding DINO, Prithvi-EO, Clay, fine-tuned heads) behind /infer, and
+evaluation vs OSM / ESA WorldCover behind /evaluate — plus /progress and static
+chip serving for the React/MapLibre split view.
 """
 from __future__ import annotations
 

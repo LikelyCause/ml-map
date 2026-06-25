@@ -1,7 +1,7 @@
 {
   "name": "swath",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -26,6 +26,9 @@
     "globals": "^17.6.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
-  }
+    "vite": "^8.0.12",
+    "@types/geojson": "^7946.0.16"
+  },
+  "description": "Swath frontend \u2014 React + MapLibre split-map UI for comparing geospatial models",
+  "license": "MIT"
 }
