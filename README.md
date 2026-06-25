@@ -21,11 +21,14 @@ Example outputs (raw imagery | model annotation):
 ## What it does
 
 - **Split view** — raw imagery (left) vs. model annotations (right), with synced pan/zoom.
-- **Four tasks**, each with a model dropdown to compare checkpoints:
-  1. **Building footprints** — SAM "segment‑everything" *vs.* Grounding DINO + SAM
-  2. **Roads / lines of communication** — Grounding DINO + SAM
+- **Seven tasks**, each with a model dropdown to compare checkpoints:
+  1. **Building footprints** — SAM "segment‑everything" *vs.* Grounding DINO + SAM (with shape + NDVI vegetation filters)
+  2. **Roads / lines of communication** — Grounding DINO + SAM, linearity‑filtered
   3. **Land cover** — Prithvi‑EO‑1.0 (13‑class crop/land), multi‑temporal Sentinel‑2
-  4. **Text‑prompt segmentation** — open vocabulary: type any object and segment it
+  4. **Foundation embeddings (unsupervised)** — run a **Clay v1** or **Prithvi‑EO‑2.0** encoder, k‑means the patch embeddings into self‑similar regions (zero‑shot, no task head)
+  5. **Burn scars (wildfire)** — **Prithvi‑EO‑2.0‑300M** fine‑tuned (HLS Burn Scars)
+  6. **Flood / surface water** — **Prithvi‑EO‑2.0‑300M** fine‑tuned (Sen1Floods11)
+  7. **Text‑prompt segmentation** — open vocabulary: type any object and segment it
 - **One‑click AOI ingest** — draw a box → fetch NAIP (0.3 m) or Sentinel‑2 from the Microsoft Planetary Computer.
 - **Live progress** — granular status (catalog search → tile download → model load → tiled detect → mask → vectorize).
 - **Evaluation** — score predictions against free reference data (OpenStreetMap, ESA WorldCover) with **IoU / precision / recall / F1**, plus a side‑by‑side reference overlay: cyan ground‑truth vectors for buildings/roads, and a colorized **ESA WorldCover** raster (left) vs. the model's classes (right) for land cover.
@@ -43,6 +46,7 @@ Example outputs (raw imagery | model annotation):
 - **Buildings:** on clean, well‑separated scenes detect‑then‑segment (DINO+SAM) edges out segment‑everything — but over **dense clusters** DINO+SAM collapses to block‑scale blobs, and **SAM segment‑everything** (with shape + NDVI vegetation filters) is the better default. The honest fix is a polygon specialist — see [docs/building-extraction-research.md](docs/building-extraction-research.md).
 - **Roads:** high precision, low recall — the model finds prominent arterials and rail corridors but misses the residential street grid. Zero‑shot foundation models can't do full road extraction; you'd want a road‑specific model (SpaceNet/DeepGlobe).
 - **Land cover:** the CDL‑trained crop model works well over Midwest farmland (sensible corn/soy/wheat) but over‑predicts "cropland" elsewhere — specialist models don't generalize.
+- **Foundation embeddings / burn‑scar / flood:** qualitative (no fixed reference). The embeddings task shows *what an encoder considers similar* zero‑shot; the fine‑tuned Prithvi‑2.0 heads are supervised, so they produce real burn‑scar / water masks where those features are present.
 
 ## Data & models
 
@@ -52,6 +56,8 @@ Example outputs (raw imagery | model annotation):
 | Multispectral | **Sentinel‑2 L2A** (global) | 10–20 m | Planetary Computer STAC |
 | Buildings/roads/text | **SAM**, **Grounding DINO** | — | HuggingFace `transformers` |
 | Land cover | **Prithvi‑EO‑1.0‑100M** (crop classification) | — | HuggingFace (mmseg checkpoint, rebuilt in PyTorch) |
+| Foundation encoders | **Clay v1**, **Prithvi‑EO‑2.0‑300M** | — | `terratorch` backbone registry |
+| Fine‑tuned heads | **Prithvi‑EO‑2.0‑300M** BurnScars · Sen1Floods11 | — | HuggingFace (native terratorch checkpoints, Apache‑2.0) |
 | Reference | **OpenStreetMap** (Overpass), **ESA WorldCover** | — | Overpass API / Planetary Computer |
 
 ## Architecture
@@ -60,13 +66,17 @@ Example outputs (raw imagery | model annotation):
 React + MapLibre GL (Vite, :5173)            FastAPI (:8077, CUDA / Apple MPS)
  ├─ AOI draw → /ingest                  →      ├─ /ingest   NAIP / Sentinel-2 (STAC mosaic, reproject)
  ├─ task ▸ model ▸ prompt → /infer      →      ├─ /infer    SAM · DINO+SAM (tiled) · Prithvi land cover
- ├─ Evaluate → /evaluate                →      ├─ /evaluate OSM / WorldCover → IoU/F1
+ │                                             │             · GeoFM embeddings (Clay/Prithvi-2.0 → k-means)
+ │                                             │             · fine-tuned Prithvi-2.0 (burn scar / flood)
+ ├─ Evaluate → /evaluate                →      ├─ /evaluate OSM / WorldCover → IoU/F1 (+ WorldCover overlay)
  ├─ split maps + overlays               ←      ├─ /progress live stage tracker
  └─ progress banner (polls /progress)         └─ model zoo (lazy-loaded, kept warm in GPU / unified memory)
 ```
 
 Chips are small per‑AOI, so results are served as MapLibre `ImageSource` raster
-overlays (PNG + bounds) and GeoJSON vectors — no tile server needed.
+overlays (PNG + bounds) and GeoJSON vectors — no tile server needed. All the
+Sentinel‑2 tasks (land cover, embeddings, burn scar, flood) reuse one 6‑band
+ingest, so adding a model is a registry entry + a wrapper.
 
 ## Notable engineering
 
@@ -74,18 +84,38 @@ overlays (PNG + bounds) and GeoJSON vectors — no tile server needed.
   only as an mmsegmentation checkpoint (won't run under torch 2.6). Dissected the
   `.pth` and **rebuilt the exact architecture in plain PyTorch** — the legacy
   weights load with zero missing/unexpected keys.
+- **Runs natively on Apple Silicon (MPS).** A central accelerator selector picks
+  cuda → mps → cpu, and individual MPS op gaps fall back to CPU per‑op rather than
+  crashing: Grounding DINO's MPSGraph shape assertion (detector pinned to CPU),
+  SAM's float64 box tensors (down‑cast), and the flood model's UperNet
+  adaptive‑pool (model relocated to CPU on first failure).
+- **Geospatial foundation models via terratorch.** Clay v1 and Prithvi‑EO‑2.0
+  encoders produce per‑patch embeddings that are k‑means clustered into an
+  unsupervised segmentation; two released Prithvi‑EO‑2.0 fine‑tunes (burn scar,
+  flood) load as native terratorch checkpoints. All consume the existing 6‑band
+  Sentinel‑2 stack.
 - **Tiled (SAHI‑style) detection** at full native resolution so Grounding DINO
   (trained on ground‑level photos) finds far more overhead objects (~3× recall).
+- **Honest, model‑quality fixes** (auditable in [docs/building-extraction-research.md](docs/building-extraction-research.md)):
+  a roads linearity filter and building footprint/NDVI‑vegetation filters; an
+  EPSG:4326 plate‑carrée **de‑stretch** so the detector sees ground‑square pixels;
+  and an eval‑correctness pass (only the line‑geometry road reference is buffered).
 - **Sentinel‑2 gotcha:** removed the +1000 baseline‑04.00 BOA offset to match the
   reflectance units Prithvi was trained on (without it, every class was wrong).
+- **NAIP mosaic** spans all overlapping tiles, newest‑first, so an AOI that
+  straddles multiple capture dates still fills the whole box.
 
 ## Stack
 
-- **Backend:** FastAPI · PyTorch 2.6 · transformers · terratorch · rasterio/rioxarray/odc‑stac · shapely/geopandas. Python 3.12 (pyenv venv `machine-learning`).
+- **Backend:** FastAPI · PyTorch 2.6 · transformers · **terratorch** (Prithvi /
+  Clay / fine‑tuned heads) · rasterio/rioxarray/odc‑stac · shapely/geopandas.
+  Python 3.12 (pyenv venv).
 - **Frontend:** React + TypeScript + MapLibre GL (Vite).
-- **Hardware:** developed on an RTX 4080 Super (16 GB); all inference local. Also
-  runs natively on Apple Silicon via the PyTorch MPS backend — the accelerator is
-  auto-selected at runtime (cuda → mps → cpu), so no code changes per machine.
+- **Hardware:** developed on an RTX 4080 Super (16 GB) and on an Apple Silicon
+  Mac (M‑series, MPS). The accelerator is auto‑selected at runtime
+  (cuda → mps → cpu), so there are no per‑machine code changes; all inference is
+  local. On Apple Silicon install the default PyPI torch wheels (no CUDA index)
+  and `run.sh` exports `PYTORCH_ENABLE_MPS_FALLBACK=1`.
 
 ## Run (development)
 
@@ -97,9 +127,13 @@ overlays (PNG + bounds) and GeoJSON vectors — no tile server needed.
 
 The frontend proxies `/api` and `/data` to the backend, so just open the frontend URL.
 
-**Tips:** NAIP is US‑only. Land cover is US‑cropland‑trained — try farmland
-(e.g. central Iowa) for sensible results. First run of each model downloads its
-weights (the progress banner shows it).
+**Tips:**
+- NAIP is US‑only (≤ ~5.5 km AOI; `ML_MAP_NAIP_MAX_SPAN_DEG` to raise). Sentinel‑2
+  tasks allow ~20 km.
+- Land cover is US‑cropland‑trained — try farmland (e.g. central Iowa) for
+  sensible results; burn‑scar/flood want scenes that actually contain fire/water.
+- First run of each model downloads its weights — the progress banner shows it
+  (Prithvi‑EO‑2.0‑300M ≈ 1.2–1.3 GB; SAM/DINO smaller).
 
 ## Build status
 
@@ -109,15 +143,20 @@ weights (the progress banner shows it).
 - [x] **Phase 3** — Text‑prompt segmentation (Grounding DINO + SAM, tiled)
 - [x] **Phase 4** — Roads + Land cover (Sentinel‑2 + Prithvi 13‑class) + live progress UI + full‑res tiling
 - [x] **Phase 5** — Model comparison + evaluation vs OSM / ESA WorldCover (IoU/F1) + reference overlay
+- [x] **Phase 6** — Apple Silicon (MPS) support; model‑quality pass (eval audit, roads linearity + building NDVI/shape filters, imagery de‑stretch); colorized WorldCover overlay; NAIP multi‑date mosaic
+- [x] **Phase 7** — Geospatial foundation models: Clay + Prithvi‑EO‑2.0 embeddings (unsupervised) and fine‑tuned Prithvi‑EO‑2.0 burn‑scar / flood
 
 ## Limitations (by design — this is a zero‑shot study)
 
 - NAIP is US‑only; the crop/land model is US‑cropland‑trained.
-- Roads are not solved zero‑shot (low recall).
+- Roads are not solved zero‑shot (low recall); linear features under text‑prompt
+  (e.g. "shoreline") hit the same `detect→box→SAM` ceiling.
 - SAM mask boundaries are limited by its internal 1024 px encoder.
 - **Dense, tree‑covered suburbia is hard:** SAM masks tree canopy as buildings
   (high recall, low precision). An **NDVI vegetation filter** (using NAIP's NIR
   band) plus shape filters mitigate it; a building specialist would solve it.
+- **Foundation embeddings are unsupervised** — clusters are self‑similar regions,
+  not named classes; normalization is approximate across encoders.
 - Reference data is imperfect (OSM completeness varies; WorldCover is 10 m and a
   different taxonomy than the crop model) — metrics are indicative, not absolute.
 
