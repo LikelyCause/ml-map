@@ -1,4 +1,4 @@
-# ML‑Map — Geospatial Foundation Models, Side by Side
+# Swath — Geospatial Foundation Models, Side by Side
 
 An interactive app for applying **geospatial foundation models** to remotely
 sensed imagery — **inference only, no training**. Draw an area on the map,
@@ -128,7 +128,7 @@ ingest, so adding a model is a registry entry + a wrapper.
 The frontend proxies `/api` and `/data` to the backend, so just open the frontend URL.
 
 **Tips:**
-- NAIP is US‑only (≤ ~5.5 km AOI; `ML_MAP_NAIP_MAX_SPAN_DEG` to raise). Sentinel‑2
+- NAIP is US‑only (≤ ~5.5 km AOI; `SWATH_NAIP_MAX_SPAN_DEG` to raise). Sentinel‑2
   tasks allow ~20 km.
 - Land cover is US‑cropland‑trained — try farmland (e.g. central Iowa) for
   sensible results; burn‑scar/flood want scenes that actually contain fire/water.

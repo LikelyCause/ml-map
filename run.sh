@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the ML-Map backend (FastAPI) and frontend (Vite) dev servers.
+# Start the Swath backend (FastAPI) and frontend (Vite) dev servers.
 set -e
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

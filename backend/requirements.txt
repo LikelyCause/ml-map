@@ -1,4 +1,4 @@
-# Backend dependencies for ML-Map. Install into a Python 3.12 environment.
+# Backend dependencies for Swath. Install into a Python 3.12 environment.
 #
 # Install PyTorch FIRST, then `pip install -r backend/requirements.txt`.
 #

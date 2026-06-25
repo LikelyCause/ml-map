@@ -33,8 +33,8 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 # Mac) without touching code. Bigger MAX_SPAN_DEG at a fixed MAX_PX = coarser
 # pixels (worse small-object detection); raise MAX_PX too to keep detail, at the
 # cost of proportionally longer SAM/DINO inference.
-MAX_SPAN_DEG = float(os.environ.get("ML_MAP_NAIP_MAX_SPAN_DEG", "0.05"))  # ~5.5 km per side
-MAX_PX = int(os.environ.get("ML_MAP_NAIP_MAX_PX", "8192"))  # long-side px of the chip the models see
+MAX_SPAN_DEG = float(os.environ.get("SWATH_NAIP_MAX_SPAN_DEG", "0.05"))  # ~5.5 km per side
+MAX_PX = int(os.environ.get("SWATH_NAIP_MAX_PX", "8192"))  # long-side px of the chip the models see
 
 
 def _bbox_id(source: str, bbox: list[float]) -> str:

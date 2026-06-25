@@ -16,7 +16,7 @@ OVERPASS_URLS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
 ]
-_HEADERS = {"User-Agent": "ml-map/0.1 (geospatial model demo)", "Accept": "application/json"}
+_HEADERS = {"User-Agent": "swath/0.1 (geospatial model demo)", "Accept": "application/json"}
 
 
 def _overpass(query: str) -> dict:

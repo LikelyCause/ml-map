@@ -1,4 +1,4 @@
-"""ML-Map backend (FastAPI).
+"""Swath backend (FastAPI).
 
 Phase 0: health check, a synthetic demo chip, and static file serving so the
 React/MapLibre split-view can render. Later phases add /stac/search, /ingest,
@@ -24,7 +24,7 @@ from backend.progress import get_progress
 DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="ML-Map", version="0.1.0")
+app = FastAPI(title="Swath", version="0.1.0")
 
 # Vite dev server runs on a different origin during development.
 app.add_middleware(

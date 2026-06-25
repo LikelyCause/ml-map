@@ -2,7 +2,7 @@
 
 This document captures (1) a cited research evaluation of the *right tool* for
 dense building footprint extraction, and (2) the practical model-quality fixes
-applied to ML-Map's zero-shot pipeline along the way. It exists because the
+applied to Swath's zero-shot pipeline along the way. It exists because the
 zero-shot SAM / Grounding-DINO+SAM building path produces **block-scale blobs**
 over clustered houses and **masks tree canopy as buildings** over foliage, and
 the roads path can't see a residential street grid at all.

@@ -192,7 +192,7 @@ function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">ML‑Map</div>
+        <div className="brand">Swath</div>
         <div className="controls">
           <label>
             Task

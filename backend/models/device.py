@@ -44,9 +44,9 @@ def detector_device() -> torch.device:
     catch it — the only reliable fix today is to keep the detector off MPS. SAM
     and Prithvi still run on the GPU; the detector only hands box coordinates to
     SAM, so there's no cross-device tensor coupling. Override with
-    ML_MAP_DETECTOR_DEVICE=mps to retry the GPU path once upstream fixes land.
+    SWATH_DETECTOR_DEVICE=mps to retry the GPU path once upstream fixes land.
     """
-    override = os.environ.get("ML_MAP_DETECTOR_DEVICE")
+    override = os.environ.get("SWATH_DETECTOR_DEVICE")
     if override:
         return torch.device(override)
     dev = get_device()

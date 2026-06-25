@@ -1,4 +1,4 @@
-# ML‑Map — Project Plan & Handoff
+# Swath — Project Plan & Handoff
 
 A portfolio app demonstrating **geospatial foundation models** for inference (no
 training) on remotely sensed imagery. Split view: raw imagery left, model
